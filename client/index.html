@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Greenhouse Portal Dashboard</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>🌱 Greenhouse Portal Dashboard</h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="error-message" class="error-message"></div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="date-picker">Date:</label>
+        <div id="date-picker"></div>
+      </div>
+
+      <div class="control-group">
+        <div class="time-slider-container">
+          <div id="time-slider"></div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div id="unit-selector"></div>
+      </div>
+    </div>
+
+    <div class="timestamp-display">
+      <strong>Current Data Point:</strong> <span id="current-timestamp">Loading...</span>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="card" id="sensor-display">
+        <h3>Sensor Data</h3>
+        <p>Loading...</p>
+      </div>
+
+      <div class="card" id="system-display">
+        <h3>System Information</h3>
+        <p>Loading...</p>
+      </div>
+
+      <div class="card" id="image-display">
+        <h3>Camera Image</h3>
+        <p>Loading...</p>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
+

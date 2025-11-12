@@ -1,0 +1,16 @@
+{
+  "name": "greenhouse-portal-client",
+  "version": "1.0.0",
+  "description": "Frontend for greenhouse dashboard",
+  "scripts": {
+    "build": "tsc && npm run bundle && npm run copy-assets",
+    "bundle": "esbuild src/app.ts --bundle --format=esm --outfile=dist/app.js --target=es2020",
+    "copy-assets": "mkdir -p dist/styles && cp src/styles/*.css dist/styles/ && cp index.html dist/"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "esbuild": "^0.19.8"
+  }
+}
+
