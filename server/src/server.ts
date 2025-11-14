@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -6,6 +6,15 @@ import { GreenhouseDatabase } from './db/database';
 import { createDataRouter } from './routes/data';
 import { createImagesRouter } from './routes/images';
 import { createDatesRouter } from './routes/dates';
+
+// Load .env file - try project root first, then server directory
+// This works both in development (from src/) and production (from dist/)
+// Environment variables from systemd/service file will override .env values
+// dotenv.config() won't override existing env vars and won't fail if file doesn't exist
+const projectRootEnv = path.join(__dirname, '../../.env');
+const serverEnv = path.join(__dirname, '../.env');
+dotenv.config({ path: projectRootEnv });
+dotenv.config({ path: serverEnv });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
