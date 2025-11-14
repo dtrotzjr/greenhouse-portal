@@ -12,7 +12,7 @@ export class GreenhouseDatabase {
   private db: Database.Database;
 
   constructor(dbPath: string) {
-    this.db = new Database(dbPath, { readonly: true });
+    this.db = new Database(dbPath, { readonly: false });
     this.db.pragma('journal_mode = WAL');
   }
 
