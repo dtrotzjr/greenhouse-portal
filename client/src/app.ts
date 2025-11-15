@@ -86,6 +86,8 @@ class GreenhouseDashboard {
   private async initialize(): Promise<void> {
     // Set date picker to today
     const today = new Date();
+    // Ensure selectedDate is initialized with today's date (normalized to midnight local time)
+    this.selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     this.datePicker.setDate(today);
     this.datePicker.setMaxDate(today);
 
@@ -105,12 +107,23 @@ class GreenhouseDashboard {
       this.selectedTimestamp = data.dataPoint.timestamp;
       this.isViewingCurrent = true;
 
-      // Update date picker if needed
-      const dataDate = new Date(data.dataPoint.timestamp * 1000);
-      this.datePicker.setDate(dataDate);
+      // Create a Date object from the timestamp (converts UTC to local time)
+      const dataDateFromTimestamp = new Date(data.dataPoint.timestamp * 1000);
+      
+      // Extract local date components to create a date representing the local calendar date
+      // This ensures we show the date that the timestamp represents in the user's local timezone
+      const localDate = new Date(
+        dataDateFromTimestamp.getFullYear(),
+        dataDateFromTimestamp.getMonth(),
+        dataDateFromTimestamp.getDate()
+      );
+      
+      // Update both the date picker and selectedDate to ensure they're in sync
+      this.datePicker.setDate(localDate);
+      this.selectedDate = localDate;
 
-      // Load timestamps for the day
-      await this.loadDataPointsForDate(dataDate);
+      // Load timestamps for the day using the local date
+      await this.loadDataPointsForDate(localDate);
 
       this.renderData(data, this.unitSelector.getUnit());
       
@@ -175,6 +188,7 @@ class GreenhouseDashboard {
 
   private isToday(date: Date): boolean {
     const today = new Date();
+    // Compare dates using local date components
     return (
       date.getDate() === today.getDate() &&
       date.getMonth() === today.getMonth() &&
