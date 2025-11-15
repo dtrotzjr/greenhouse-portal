@@ -209,6 +209,34 @@ header h1 {
   margin-bottom: 20px;
 }
 
+.sensor-camera-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.sensor-camera-row .card {
+  margin-bottom: 0;
+}
+
+.system-charts-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.system-charts-row .card {
+  margin-bottom: 0;
+  min-height: 300px;
+  position: relative;
+}
+
+.system-charts-row canvas {
+  max-height: 300px;
+}
+
 .card {
   background-color: var(--card-background);
   border-radius: 8px;
@@ -323,6 +351,22 @@ header h1 {
 
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .sensor-camera-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sensor-camera-row .card {
+    margin-bottom: 20px;
+  }
+
+  .system-charts-row {
+    grid-template-columns: 1fr;
+  }
+
+  .system-charts-row .card {
+    margin-bottom: 20px;
   }
 }
 
