@@ -1,4 +1,6 @@
 import { Chart, registerables } from 'chart.js';
+import { TemperatureUnit } from './UnitSelector';
+import { formatTemperature } from '../utils/temperature';
 
 Chart.register(...registerables);
 
@@ -12,6 +14,9 @@ export class SystemCharts {
   private wifiChart: Chart | null = null;
   private storageChart: Chart | null = null;
   private currentPeriod: TimePeriod = 'day';
+  private unit: TemperatureUnit = 'C';
+  private currentSystemData: any = null;
+  private currentLabels: string[] = [];
 
   constructor(
     socTempContainerId: string,
@@ -37,8 +42,17 @@ export class SystemCharts {
     this.storageContainer = storageContainer;
   }
 
-  async render(data: any, period: TimePeriod): Promise<void> {
+  setUnit(unit: TemperatureUnit): void {
+    this.unit = unit;
+    // Re-render SOC chart if we have data
+    if (this.currentSystemData && this.currentLabels.length > 0) {
+      this.renderSOCChart(this.currentLabels, this.currentSystemData);
+    }
+  }
+
+  async render(data: any, period: TimePeriod, unit: TemperatureUnit = 'C'): Promise<void> {
     this.currentPeriod = period;
+    this.unit = unit;
 
     if (!data || !data.systemData) {
       this.socTempContainer.innerHTML = '<p>No system data available</p>';
@@ -48,6 +62,7 @@ export class SystemCharts {
     }
 
     const systemData = data.systemData;
+    this.currentSystemData = systemData;
 
     // Prepare labels based on period
     let labels: string[] = [];
@@ -69,6 +84,8 @@ export class SystemCharts {
       });
     }
 
+    this.currentLabels = labels;
+
     // Render SOC Temperature Chart
     this.renderSOCChart(labels, systemData);
 
@@ -80,9 +97,21 @@ export class SystemCharts {
   }
 
   private renderSOCChart(labels: string[], systemData: any): void {
-    const socAvg = systemData.soc_temperature_avg.map((t: number) => (isNaN(t) ? null : t));
-    const socMin = systemData.soc_temperature_min.map((t: number) => (isNaN(t) ? null : t));
-    const socMax = systemData.soc_temperature_max.map((t: number) => (isNaN(t) ? null : t));
+    // Store raw Celsius values for tooltip formatting
+    const socAvgRaw = systemData.soc_temperature_avg;
+    const socMinRaw = systemData.soc_temperature_min;
+    const socMaxRaw = systemData.soc_temperature_max;
+
+    // Convert temperatures based on unit
+    const socAvg = socAvgRaw.map((t: number) => 
+      isNaN(t) ? null : this.unit === 'F' ? (t * 9/5 + 32) : t
+    );
+    const socMin = socMinRaw.map((t: number) => 
+      isNaN(t) ? null : this.unit === 'F' ? (t * 9/5 + 32) : t
+    );
+    const socMax = socMaxRaw.map((t: number) => 
+      isNaN(t) ? null : this.unit === 'F' ? (t * 9/5 + 32) : t
+    );
 
     this.socTempContainer.innerHTML = '<canvas id="soc-temp-chart"></canvas>';
     const canvas = document.getElementById('soc-temp-chart') as HTMLCanvasElement;
@@ -94,13 +123,15 @@ export class SystemCharts {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const unitSymbol = this.unit === 'C' ? '°C' : '°F';
+
     this.socTempChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels,
         datasets: [
           {
-            label: 'SOC Temp Avg (°C)',
+            label: `SOC Temp Avg (${unitSymbol})`,
             data: socAvg,
             borderColor: 'rgb(220, 53, 69)',
             backgroundColor: 'rgba(220, 53, 69, 0.2)',
@@ -108,7 +139,7 @@ export class SystemCharts {
             pointRadius: 2,
           },
           {
-            label: 'SOC Temp Min (°C)',
+            label: `SOC Temp Min (${unitSymbol})`,
             data: socMin,
             borderColor: 'rgb(255, 159, 64)',
             backgroundColor: 'rgba(255, 159, 64, 0.2)',
@@ -117,7 +148,7 @@ export class SystemCharts {
             borderDash: [5, 5],
           },
           {
-            label: 'SOC Temp Max (°C)',
+            label: `SOC Temp Max (${unitSymbol})`,
             data: socMax,
             borderColor: 'rgb(255, 205, 86)',
             backgroundColor: 'rgba(255, 205, 86, 0.2)',
@@ -143,6 +174,38 @@ export class SystemCharts {
             display: true,
             position: 'top',
           },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                if (context.parsed.y !== null) {
+                  const dataIndex = context.dataIndex;
+                  let rawTemp: number | null = null;
+                  
+                  if (context.datasetIndex === 0) {
+                    // SOC Temp Avg
+                    rawTemp = socAvgRaw[dataIndex];
+                  } else if (context.datasetIndex === 1) {
+                    // SOC Temp Min
+                    rawTemp = socMinRaw[dataIndex];
+                  } else if (context.datasetIndex === 2) {
+                    // SOC Temp Max
+                    rawTemp = socMaxRaw[dataIndex];
+                  }
+                  
+                  if (rawTemp !== null && !isNaN(rawTemp)) {
+                    label += formatTemperature(rawTemp, this.unit);
+                  } else {
+                    label += 'N/A';
+                  }
+                }
+                return label;
+              },
+            },
+          },
         },
         scales: {
           x: {
@@ -156,7 +219,7 @@ export class SystemCharts {
             display: true,
             title: {
               display: true,
-              text: 'Temperature (°C)',
+              text: `Temperature (${unitSymbol})`,
             },
           },
         },

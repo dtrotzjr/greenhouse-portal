@@ -67,6 +67,7 @@ class GreenhouseDashboard {
         this.renderData(this.currentData, unit);
       }
       this.chartDisplay.setUnit(unit);
+      this.systemCharts.setUnit(unit);
       // Reload chart data with new unit
       this.loadChartData();
     });
@@ -209,18 +210,18 @@ class GreenhouseDashboard {
       if (period === 'day') {
         chartData = await apiClient.getChartDataForDay(date);
         await this.chartDisplay.render(chartData, 'day', date, this.unitSelector.getUnit());
-        await this.systemCharts.render(chartData, 'day');
+        await this.systemCharts.render(chartData, 'day', this.unitSelector.getUnit());
       } else if (period === 'month') {
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
         chartData = await apiClient.getChartDataForMonth(year, month);
         await this.chartDisplay.render(chartData, 'month', date, this.unitSelector.getUnit());
-        await this.systemCharts.render(chartData, 'month');
+        await this.systemCharts.render(chartData, 'month', this.unitSelector.getUnit());
       } else if (period === 'year') {
         const year = date.getFullYear();
         chartData = await apiClient.getChartDataForYear(year);
         await this.chartDisplay.render(chartData, 'year', date, this.unitSelector.getUnit());
-        await this.systemCharts.render(chartData, 'year');
+        await this.systemCharts.render(chartData, 'year', this.unitSelector.getUnit());
       }
     } catch (error) {
       console.error('Error loading chart data:', error);
