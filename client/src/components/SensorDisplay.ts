@@ -18,19 +18,20 @@ export class SensorDisplay {
       return;
     }
 
-    const sensorsHtml = sensors
-      .map(sensor => { 
+    sensors
+      .forEach(sensor => { 
         if (sensor.sensor_id === 1) { 
-          return "Internal" 
+          sensor.name ="Internal" 
         } else if (sensor.sensor_id === 2) {
-          return "External"
+          sensor.name = "External"
         } else {
-          return "Unknown"
+          sensor.name = "Unknown"
         }
-      }).map(
-        (sensor) => `
+      });
+
+    const sensorsHtml = sensors.map(sensor => `
       <div class="sensor-card">
-        <h3>Sensor ${sensor}</h3>
+        <h3>Sensor ${sensor.name}</h3>
         <div class="sensor-metrics">
           <div class="metric">
             <span class="metric-label">Temperature:</span>

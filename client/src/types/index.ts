@@ -7,6 +7,7 @@ export interface DataPoint {
 export interface SensorData {
   id: number;
   sensor_id: number;
+  name?: string;
   temperature: number;
   humidity: number;
   data_point_id: number;
