@@ -150,8 +150,24 @@ export class GreenhouseDatabase {
       )
       .all(startTimestamp, endTimestamp) as { id: number; timestamp: number }[];
 
-    const timestamps = dataPoints.map((dp) => dp.timestamp);
-    const dataPointIds = dataPoints.map((dp) => dp.id);
+    // Generate hour timestamps for the day view (one per hour)
+    const hourTimestamps: number[] = [];
+    for (let hour = 0; hour < 24; hour++) {
+      const hourDate = new Date(year, month, day, hour, 0, 0, 0);
+      hourTimestamps.push(Math.floor(hourDate.getTime() / 1000));
+    }
+    const timestamps = hourTimestamps;
+    
+    // Group data points by hour for aggregation
+    const hourlyGroups: Map<number, number[]> = new Map();
+    dataPoints.forEach((dp) => {
+      const date = new Date(dp.timestamp * 1000);
+      const hour = date.getHours();
+      if (!hourlyGroups.has(hour)) {
+        hourlyGroups.set(hour, []);
+      }
+      hourlyGroups.get(hour)!.push(dp.id);
+    });
 
     // Aggregate sensor data by hour (for day view, group by hour)
     const sensorIds = this.db
@@ -166,19 +182,40 @@ export class GreenhouseDatabase {
       const humMin: number[] = [];
       const humMax: number[] = [];
 
-      // For each data point, get the sensor data
-      dataPointIds.forEach((dpId) => {
-        const sensor = this.db
-          .prepare('SELECT temperature, humidity FROM sensor_data WHERE data_point_id = ? AND sensor_id = ?')
-          .get(dpId, s.sensor_id) as { temperature: number; humidity: number } | undefined;
+      // For each hour, aggregate the sensor data
+      for (let hour = 0; hour < 24; hour++) {
+        const hourDataPointIds = hourlyGroups.get(hour) || [];
 
-        if (sensor) {
-          tempAvg.push(sensor.temperature);
-          tempMin.push(sensor.temperature);
-          tempMax.push(sensor.temperature);
-          humAvg.push(sensor.humidity);
-          humMin.push(sensor.humidity);
-          humMax.push(sensor.humidity);
+        if (hourDataPointIds.length > 0) {
+          const temps: number[] = [];
+          const hums: number[] = [];
+
+          hourDataPointIds.forEach((dpId) => {
+            const sensor = this.db
+              .prepare('SELECT temperature, humidity FROM sensor_data WHERE data_point_id = ? AND sensor_id = ?')
+              .get(dpId, s.sensor_id) as { temperature: number; humidity: number } | undefined;
+
+            if (sensor) {
+              temps.push(sensor.temperature);
+              hums.push(sensor.humidity);
+            }
+          });
+
+          if (temps.length > 0) {
+            tempAvg.push(temps.reduce((a, b) => a + b, 0) / temps.length);
+            tempMin.push(Math.min(...temps));
+            tempMax.push(Math.max(...temps));
+            humAvg.push(hums.reduce((a, b) => a + b, 0) / hums.length);
+            humMin.push(Math.min(...hums));
+            humMax.push(Math.max(...hums));
+          } else {
+            tempAvg.push(NaN);
+            tempMin.push(NaN);
+            tempMax.push(NaN);
+            humAvg.push(NaN);
+            humMin.push(NaN);
+            humMax.push(NaN);
+          }
         } else {
           tempAvg.push(NaN);
           tempMin.push(NaN);
@@ -187,7 +224,7 @@ export class GreenhouseDatabase {
           humMin.push(NaN);
           humMax.push(NaN);
         }
-      });
+      }
 
       return {
         sensor_id: s.sensor_id,
@@ -200,7 +237,7 @@ export class GreenhouseDatabase {
       };
     });
 
-    // Aggregate system data
+    // Aggregate system data by hour
     const socTempAvg: number[] = [];
     const socTempMin: number[] = [];
     const socTempMax: number[] = [];
@@ -209,19 +246,48 @@ export class GreenhouseDatabase {
     const storageUsedAvg: number[] = [];
     const storageAvailAvg: number[] = [];
 
-    dataPointIds.forEach((dpId) => {
-      const system = this.db
-        .prepare('SELECT * FROM system_data WHERE data_point_id = ?')
-        .get(dpId) as SystemData | undefined;
+    // For each hour, aggregate the system data
+    for (let hour = 0; hour < 24; hour++) {
+      const hourDataPointIds = hourlyGroups.get(hour) || [];
 
-      if (system) {
-        socTempAvg.push(system.soc_temperature);
-        socTempMin.push(system.soc_temperature);
-        socTempMax.push(system.soc_temperature);
-        wlan0LinkQualityAvg.push(system.wlan0_link_quality);
-        wlan0SignalLevelAvg.push(system.wlan0_signal_level);
-        storageUsedAvg.push(system.storage_used);
-        storageAvailAvg.push(system.storage_avail);
+      if (hourDataPointIds.length > 0) {
+        const socTemps: number[] = [];
+        const linkQualities: number[] = [];
+        const signalLevels: number[] = [];
+        const storageUseds: number[] = [];
+        const storageAvails: number[] = [];
+
+        hourDataPointIds.forEach((dpId) => {
+          const system = this.db
+            .prepare('SELECT * FROM system_data WHERE data_point_id = ?')
+            .get(dpId) as SystemData | undefined;
+
+          if (system) {
+            socTemps.push(system.soc_temperature);
+            linkQualities.push(system.wlan0_link_quality);
+            signalLevels.push(system.wlan0_signal_level);
+            storageUseds.push(system.storage_used);
+            storageAvails.push(system.storage_avail);
+          }
+        });
+
+        if (socTemps.length > 0) {
+          socTempAvg.push(socTemps.reduce((a, b) => a + b, 0) / socTemps.length);
+          socTempMin.push(Math.min(...socTemps));
+          socTempMax.push(Math.max(...socTemps));
+          wlan0LinkQualityAvg.push(linkQualities.reduce((a, b) => a + b, 0) / linkQualities.length);
+          wlan0SignalLevelAvg.push(signalLevels.reduce((a, b) => a + b, 0) / signalLevels.length);
+          storageUsedAvg.push(storageUseds.reduce((a, b) => a + b, 0) / storageUseds.length);
+          storageAvailAvg.push(storageAvails.reduce((a, b) => a + b, 0) / storageAvails.length);
+        } else {
+          socTempAvg.push(NaN);
+          socTempMin.push(NaN);
+          socTempMax.push(NaN);
+          wlan0LinkQualityAvg.push(NaN);
+          wlan0SignalLevelAvg.push(NaN);
+          storageUsedAvg.push(NaN);
+          storageAvailAvg.push(NaN);
+        }
       } else {
         socTempAvg.push(NaN);
         socTempMin.push(NaN);
@@ -231,10 +297,10 @@ export class GreenhouseDatabase {
         storageUsedAvg.push(NaN);
         storageAvailAvg.push(NaN);
       }
-    });
+    }
 
     const systemData =
-      dataPointIds.length > 0
+      timestamps.length > 0
         ? {
             soc_temperature_avg: socTempAvg,
             soc_temperature_min: socTempMin,
